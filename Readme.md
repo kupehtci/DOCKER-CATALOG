@@ -15,6 +15,18 @@ docker compose up
 
 For `Dockerfiles` read the `Readme.md` of the folder for further instructions. 
 
+## How to stop
+
+In order to stop a docker compose: 
+```bash
+docker compose down
+```
+
+And also remove the volumes and their data: 
+```bash
+docker compose down -v 
+```
+
 ## How to test
 
 Each service varies in funcionality and integrations but the services that allow an easy testing, a python script or similar is placed together with the docker files for testing. 
