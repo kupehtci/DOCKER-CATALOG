@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: sqlserver
+    hostname: sql-server
+    ports:
+      - '1433:1433'
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_PID: Developer # | Evaluation | product_id
+      MSSQL_SA_PASSWORD: MySecureP@ssw0rd2026
+    volumes:
+      - sql_data:/var/opt/mssql
+
+volumes:
+  sql_data:
