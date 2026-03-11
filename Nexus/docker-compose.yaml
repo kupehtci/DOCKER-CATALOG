@@ -1,0 +1,23 @@
+services:
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    hostname: 'nexus'
+    ports:
+      - "8081:8081"  # Web UI and API
+    volumes:
+      - nexus-data:/nexus-data
+    environment:
+      - INSTALL4J_JAVA_HOME=/opt/java/openjdk  # Uses bundled OpenJDK
+      - INSTALL4J_ADD_VM_PARAMS=-Xms2g -Xmx4g -XX:MaxDirectMemorySize=2g  # Tune for 8GB+ RAM host
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/service/rest/v1/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # First startup takes ~3min
+
+volumes:
+  nexus-data:
+    driver: local   # More recommendable for PROD environments to set an external volume.
