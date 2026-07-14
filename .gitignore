@@ -1,2 +1,4 @@
 # Ignore some projects
 F5-BIG-IP
+
+*_tokens*
