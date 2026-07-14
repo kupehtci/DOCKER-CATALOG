@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  vault-pro:
+    image: hashicorp/vault
+    container_name: vault-pro
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault_data:/vault/file
+    environment:
+      VAULT_LOCAL_CONFIG: |
+        {
+          "storage": {"file": {"path": "/vault/file"}},
+          "api_addr": "http://0.0.0.0:8200",
+          "listener": [{"tcp": { "address": "0.0.0.0:8200", "tls_disable": true}}],
+          "default_lease_ttl": "168h",
+          "max_lease_ttl": "720h",
+          "ui": true
+        }
+    command: server
+    restart: unless-stopped
+
+volumes:
+  vault_data:
+    driver: local
