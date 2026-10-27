@@ -1,0 +1,6 @@
+2026-10-19 13:01:24 INFO Filebeat test log line
+2026-10-19 13:02:2501 INFO Filebeat test log lineasd
+2026-10-19 13:02:2501 ERROR Error de ehjemplo
+2026-10-19 13:02:2501 ERROR Error2
+2026-10-19 13:02:2501 WARNING Ejemplo de Warning
+2026-10-19 13:02:2501 DEBUG Error de Debug

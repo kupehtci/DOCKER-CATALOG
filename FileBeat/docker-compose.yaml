@@ -1,0 +1,52 @@
+# FileBeat docker compose file
+services:
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${FILEBEAT_VERSION:-8.15.3}
+    container_name: filebeat
+    hostname: filebeat
+    restart: unless-stopped
+    # Filebeat needs root to read logs owned by other users (e.g. /var/lib/docker/containers)
+    user: root
+    # --strict.perms=false avoids the "config file must be owned by root" error with bind-mounted configs
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    environment:
+      # Output targets used inside filebeat.yml (${VAR:default} syntax)
+      LOGSTASH_HOSTS: "${LOGSTASH_HOSTS:-graylog:5044}"
+#      ELASTICSEARCH_HOSTS: "${ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}"
+#      ELASTICSEARCH_USERNAME: "${ELASTICSEARCH_USERNAME:-elastic}"
+#      ELASTICSEARCH_PASSWORD: "${ELASTICSEARCH_PASSWORD:-changeme}"
+    volumes:
+      # Main configuration
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # Local log files to ship (put your *.log files here)
+      - ./logs:/var/log/app:ro
+      # Docker container logs (Linux hosts only, needed for the docker-logs input)
+      # - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Registry: keeps the read offset of each file so logs are not re-sent after a restart
+      - filebeat_data:/usr/share/filebeat/data
+    healthcheck:
+      test: ["CMD", "filebeat", "test", "config", "--strict.perms=false"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+#      - filebeat
+      - graylog_graylog
+
+volumes:
+  filebeat_data:
+
+#networks:
+#  filebeat:
+#    name: filebeat
+
+
+networks:
+  graylog_graylog:
+    external: true

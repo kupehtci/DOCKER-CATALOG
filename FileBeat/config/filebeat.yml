@@ -1,0 +1,126 @@
+# ============================== Filebeat inputs ===============================
+filebeat.inputs:
+  # Log files mounted from ./logs
+  - type: filestream
+    id: app-logs
+    enabled: true
+    paths:
+      - /var/log/app/*.log
+    fields:
+      source_type: app
+      facility: WSO2-APIM
+      sistema_informacion: WSO2
+
+    fields_under_root: true
+    # Join multiline entries (e.g. Java stack traces): lines that don't start with a date
+    # are appended to the previous event.
+    # parsers:
+    #   - multiline:
+    #       type: pattern
+    #       pattern: '^\d{4}-\d{2}-\d{2}'
+    #       negate: true
+    #       match: after
+
+  # Docker container logs (requires /var/lib/docker/containers mount)
+  - type: filestream
+    id: docker-logs
+    enabled: false
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    parsers:
+      - container: ~
+    prospector.scanner.symlinks: true
+
+# ============================== Processors ====================================
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+
+  # Valor por defecto: INFO
+  - add_fields:
+      target: ''
+      fields:
+        level: 6
+
+  # ERROR
+  - add_fields:
+      when.contains:
+        message: "ERROR"
+      target: ''
+      fields:
+        level: 3
+
+  # FATAL -> Critical
+  - add_fields:
+      when.contains:
+        message: "FATAL"
+      target: ''
+      fields:
+        level: 2
+
+  # WARNING / WARN
+  - add_fields:
+      when.contains:
+        message: "WARNING"
+      target: ''
+      fields:
+        level: 4
+
+  - add_fields:
+      when.contains:
+        message: "WARN"
+      target: ''
+      fields:
+        level: 4
+
+  # DEBUG / TRACE
+  - add_fields:
+      when.contains:
+        message: "DEBUG"
+      target: ''
+      fields:
+        level: 7
+
+  - add_fields:
+      when.contains:
+        message: "TRACE"
+      target: ''
+      fields:
+        level: 7
+
+  # INFO explícito
+  - add_fields:
+      when.contains:
+        message: "INFO"
+      target: ''
+      fields:
+        level: 6
+
+# ============================== Outputs =======================================
+# Only ONE output can be enabled at a time.
+
+# --- Console (default): events are printed in `docker logs filebeat` ---
+#output.console:
+#  pretty: true
+
+# --- Logstash / GrayLog Beats input ---
+output.logstash:
+  hosts: ["${LOGSTASH_HOSTS}"]
+
+# --- Elasticsearch ---
+# output.elasticsearch:
+#   hosts: ["${ELASTICSEARCH_HOSTS}"]
+#   username: "${ELASTICSEARCH_USERNAME}"
+#   password: "${ELASTICSEARCH_PASSWORD}"
+
+# --- Kafka ---
+# output.kafka:
+#   hosts: ["kafka:9092"]
+#   topic: "filebeat"
+
+# ============================== Logging =======================================
+logging.level: info
+logging.to_stderr: true
+
