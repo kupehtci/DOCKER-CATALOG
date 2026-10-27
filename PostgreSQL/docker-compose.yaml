@@ -1,0 +1,27 @@
+# PostgreSQL Docker Compose File
+version: "3.8"
+services:
+  postgresql:
+    image: postgres:16-alpine
+    container_name: postgresql
+    environment:
+      POSTGRES_DB: example
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: username_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d example"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
