@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"          # Enable 443 for HTTPs connections
+    volumes:
+      - ./html:/usr/share/nginx/html:ro   # static files sharing .html/ host folder to NGINX
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
