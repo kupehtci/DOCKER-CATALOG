@@ -1,0 +1,13 @@
+services:
+  jenkins:
+    image: jenkins/jenkins
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "5000:5000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    restart: on-failure
+
+volumes:
+  jenkins_home:
