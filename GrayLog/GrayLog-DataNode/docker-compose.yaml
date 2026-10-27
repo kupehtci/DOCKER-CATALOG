@@ -12,13 +12,14 @@ services:
       - mongodb_config:/data/configdb
 
   datanode:
-    image: graylog/graylog-datanode:7.1
+    image: graylog/graylog-datanode:7.2
     hostname: datanode
     restart: unless-stopped
     depends_on:
       - mongodb
     environment:
       GRAYLOG_DATANODE_NODE_ID_FILE: /var/lib/graylog-datanode/node-id
+      # From .env. Must match the graylog service value (see .env.example)
       GRAYLOG_DATANODE_PASSWORD_SECRET: ${GRAYLOG_PASSWORD_SECRET}
       GRAYLOG_DATANODE_MONGODB_URI: mongodb://mongodb:27017/graylog
     ulimits:
@@ -38,25 +39,27 @@ services:
       - graylog_datanode:/var/lib/graylog-datanode
 
   graylog:
-    image: graylog/graylog:7.1
+    image: graylog/graylog:7.2
     hostname: server
     restart: unless-stopped
     depends_on:
       - mongodb
       - datanode
-    entrypoint: /usr/bin/tini -- /docker-entrypoint.sh
     environment:
       GRAYLOG_NODE_ID_FILE: /usr/share/graylog/data/config/node-id
       GRAYLOG_HTTP_BIND_ADDRESS: 0.0.0.0:9000
       GRAYLOG_HTTP_EXTERNAL_URI: http://127.0.0.1:9000/
       GRAYLOG_MONGODB_URI: mongodb://mongodb:27017/graylog
+      # From .env: shared encryption secret, same value as the datanode (see .env.example)
       GRAYLOG_PASSWORD_SECRET: ${GRAYLOG_PASSWORD_SECRET}
+      # From .env: SHA-256 hash of the `admin` user password (see .env.example)
       GRAYLOG_ROOT_PASSWORD_SHA2: ${GRAYLOG_ROOT_PASSWORD_SHA2}
       GRAYLOG_REPORT_DISABLE_SANDBOX: "true"
     ports:
       - "9000:9000"     # Web UI / API
       - "1514:1514/udp" # Example Syslog UDP input
       - "1514:1514/tcp" # Example Syslog TCP input
+      - "5044:5044/tcp"     # Beats: Filebeat, Winlogbeat, etc.
       - "12201:12201/udp" # GELF UDP
       - "12201:12201/tcp" # GELF TCP
     networks:

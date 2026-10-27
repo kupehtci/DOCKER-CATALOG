@@ -9,7 +9,8 @@ The architecture is composed of three services:
 
 The required files are: 
 * `docker-compose.yaml` defines the services. 
-* `.env`:  stores `GRAYLOG_PASSWORD_SECRET` and `GRAYLOG_ROOT_PASSWORD_SHA2` that the docker-compose file expects to be provided separately for security reasons. 
+* `.env`:  stores `GRAYLOG_PASSWORD_SECRET` and `GRAYLOG_ROOT_PASSWORD_SHA2` that the docker-compose file expects to be provided separately for security reasons. It is not committed; create it from `.env.example` (see [Environmental variables](#environmental-variables)).
+* `.env.example`: commented template of the `.env` file. 
 
 ## Prerequisites 
 
@@ -23,15 +24,39 @@ To make the kernel setting persistent across reboots, add it to /etc/sysctl.conf
 
 ## Environmental variables
 
-GrayLog requires a password secret and an SHA-256 hash for the root password, that is stored in the separated `.env` files. 
+The docker-compose file reads two values from a `.env` file placed next to it. That file is git-ignored, so create it from the template:
+```bash
+cp .env.example .env
+```
+
+| Variable | Used by | What it is for | What to put |
+|---|---|---|---|
+| `GRAYLOG_PASSWORD_SECRET` | `graylog` and `datanode` | Shared secret. Graylog uses it to encrypt/salt sensitive data stored in MongoDB (stored credentials, tokens, sessions) and the Data Node uses it to authenticate against the Graylog server. It is **not** a login password. | A random string, letters and digits, at least 16 characters (64-96 recommended). |
+| `GRAYLOG_ROOT_PASSWORD_SHA2` | `graylog` | Password of the built-in `admin` user, used to log in to the web UI and the REST API after the preflight setup. | The SHA-256 hash (64 hex characters) of the password you choose, **never the plain password**. |
+
 To generate them: 
 ```bash
-# Generate the password secret
-< /dev/urandom tr -dc A-Z-a-z-0-9 | head -c96 ; echo
-
-# Genrate the root password hash
+# Generate the password secret (96 random characters)
+< /dev/urandom LC_ALL=C tr -dc 'A-Za-z0-9' | head -c96 ; echo
+```
+```bash
+# Generate the root password hash on Linux (-n avoids hashing the trailing newline)
 echo -n 'YourAdminPassword' | sha256sum | cut -d' ' -f1
 ```
+```bash
+# Generate the root password hash on macOS
+echo -n 'YourAdminPassword' | shasum -a 256 | cut -d' ' -f1
+```
+
+The resulting `.env` looks like this:
+```
+GRAYLOG_PASSWORD_SECRET=<random-string-of-96-characters>
+GRAYLOG_ROOT_PASSWORD_SHA2=<sha256-hash-of-the-admin-password>
+```
+
+Notes:
+* `GRAYLOG_PASSWORD_SECRET` must be the same for `graylog` and `datanode` (the compose file already passes the same variable to both). Do not change it after the first start: data encrypted with the old value becomes unreadable and the Data Node can no longer connect, so changing it means removing the volumes (`docker compose down -v`).
+* `GRAYLOG_ROOT_PASSWORD_SHA2` can be changed at any time: update the hash and recreate the container with `docker compose up -d graylog`.
 
 # Deployment
 
