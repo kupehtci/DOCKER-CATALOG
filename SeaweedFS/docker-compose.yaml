@@ -79,3 +79,26 @@ services:
     depends_on:
       - filer
     restart: unless-stopped
+
+  admin:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs-admin
+    command: >
+      admin
+      -ip=0.0.0.0
+      -port=12535
+      -master=master:9333
+      -dataDir=/data
+    environment:
+      WEED_ADMIN_USER: ${SEAWEED_ADMIN_USER:-admin}
+      WEED_ADMIN_PASSWORD: ${SEAWEED_ADMIN_PASSWORD:?Set SEAWEED_ADMIN_PASSWORD in .env}
+    ports:
+      - "12535:12535"
+    volumes:
+      - ./data/admin:/data
+    depends_on:
+      master:
+        condition: service_healthy
+      filer:
+        condition: service_started
+    restart: unless-stopped

@@ -6,7 +6,7 @@ Allows horizontal scaling by adding volume servers.
 
 ## Docker Compose
 
-It starts 4 containers SeaweedFS that together maintain the service, as it consist on:
+It starts 5 containers SeaweedFS that together maintain the service, as it consist on:
 * Control plane (`master`): Port 9333
   * The `master` coordinates the cluster and knows where volumes are located.
 * Data (`volume`): Port 8080
@@ -15,6 +15,8 @@ It starts 4 containers SeaweedFS that together maintain the service, as it consi
   * The `filer` provides filesystem-like metadata and path management
 * S3 API (`s3`): Port 8333
   * the `s3` service exposes an AWS S3-compatible API for clients such as AWS SDKs, AWS CLI, `rclone`, `s3cmd` or Boto3.
+* Admin UI (`admin`): Port 12535
+  * The `admin` service provides a web panel for cluster topology, volumes, file browser, S3 buckets/users and maintenance tasks.
 
 ## Project structure
 
@@ -79,7 +81,14 @@ The `admin` identity has full administrative permissions. The `app` identity can
 Create the required data directories:
 
 ```bash
-mkdir -p data/master data/volume data/filer
+mkdir -p data/master data/volume data/filer data/admin
+```
+
+Create a `.env` file with the admin panel credentials (see `.env.example`):
+
+```bash
+cp .env.example .env
+# edit SEAWEED_ADMIN_PASSWORD
 ```
 
 Start the stack:
@@ -105,6 +114,8 @@ Once running, the S3 endpoint is available at:
 ```text
 http://localhost:8333
 ```
+
+The admin panel is available at `http://localhost:12535` (login with `SEAWEED_ADMIN_USER` / `SEAWEED_ADMIN_PASSWORD`).
 
 ## Usage
 
@@ -253,6 +264,7 @@ docker compose logs -f master
 docker compose logs -f volume
 docker compose logs -f filer
 docker compose logs -f s3
+docker compose logs -f admin
 
 # Restart a single service
 docker compose restart s3
