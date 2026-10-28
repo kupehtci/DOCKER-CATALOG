@@ -1,0 +1,27 @@
+services:
+  myapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DOTNET_VERSION: "10.0"
+    image: myapi:local
+    container_name: myapi
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Logging__LogLevel__Default: Information
+    volumes:
+      - myapi_logs:/app/logs
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  myapi_logs:

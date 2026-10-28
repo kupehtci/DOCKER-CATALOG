@@ -8,3 +8,7 @@ F5-BIG-IP
 # Jetbrains IDEs files
 .idea
 
+
+# .NET build output
+**/bin/
+**/obj/

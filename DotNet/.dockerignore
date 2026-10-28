@@ -1,0 +1,16 @@
+# Local build output: the host obj/ would overwrite the restore done inside the image
+**/bin/
+**/obj/
+
+# IDE and OS files
+**/.idea/
+**/.vs/
+**/.vscode/
+**/*.user
+**/.DS_Store
+
+# Docker files are not needed inside the image
+Dockerfile
+docker-compose.yaml
+.dockerignore
+Readme.md
