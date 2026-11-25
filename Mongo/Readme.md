@@ -12,7 +12,7 @@ The script just generates a connection URI composed of the credentials and the d
 
 To execute the python script: 
 ```bash
-pip install pymongo
+pip install -r requirements.txt
 python3 mongo_test.py
 ```
 
@@ -20,7 +20,7 @@ Or either use environment:
 ```bash
 python3 -m venv .venv
 source ./.venv/bin/activate
-pip install pymongo
+pip install -r requirements.txt
 python3 mongo_test.py
 ```
 
