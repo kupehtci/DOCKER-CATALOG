@@ -177,6 +177,42 @@ If both services are on the same Docker network, use the service name:
 http://elasticsearch:9200
 ```
 
+## Python script
+
+The `elasticsearch_test.py` script allows a quick check, and serves as a reference, of how to connect to Elasticsearch once it is deployed.
+
+The script connects to the cluster, prints its name, version and health, creates the `test-index` index (if it does not exist), inserts a document and searches for it.
+
+> Note! The script reads `ELASTIC_PASSWORD` from the same `.env` file used by `docker-compose.yaml`. The URL and user can be overridden with the environment variables `ELASTICSEARCH_URL` and `ELASTICSEARCH_USERNAME`.
+
+The Python client major version must match the server one, so `requirements.txt` pins an `8.x` client for the `8.19.0` image.
+
+To execute the Python script:
+```bash
+pip install -r requirements.txt
+python3 elasticsearch_test.py
+```
+
+Or use a virtual environment:
+```bash
+python3 -m venv .venv
+source ./.venv/bin/activate
+pip install -r requirements.txt
+python3 elasticsearch_test.py
+```
+
+Example output:
+```text
+✅ Connected successfully to Elasticsearch!
+Cluster: docker-cluster - Version: 8.19.0
+Cluster health: green
+Created index: test-index
+Inserted document ID: ...
+Found 1 documents:
+  ...: {'message': 'Hello Elasticsearch', 'level': 'INFO', 'timestamp': '...'}
+Connection closed.
+```
+
 ### Security
 This configuration enables security with a username and password, but it is intended for local development.
 
