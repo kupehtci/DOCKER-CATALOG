@@ -1,29 +1,29 @@
-# Elasticsearch con Docker Compose
-Servicio local de Elasticsearch en un solo nodo, pensado para desarrollo, pruebas y entornos de laboratorio. Incluye persistencia de datos, healthcheck y autenticación básica mediante usuario elastic.
+# Elasticsearch with Docker Compose
+Local single-node Elasticsearch service, intended for development, testing and lab environments. Includes data persistence, a healthcheck and basic authentication through the elastic user.
 
-## Configuración
-Crea un archivo .env en la misma carpeta que docker-compose.yml:
+## Configuration
+Create a .env file in the same folder as docker-compose.yml:
 ```env
-ELASTIC_PASSWORD=CambiaEstaPasswordSegura
+ELASTIC_PASSWORD=ChangeThisSecurePassword
 ```
-No subas el archivo .env a Git. Añádelo a .gitignore.
+Do not commit the .env file to Git. Add it to .gitignore.
 
-## Arrancar el servicio
+## Start the service
 ```bash
 docker compose up -d
 ```
-Verificar el estado:
+Check the status:
 
 ```bash
 docker compose ps
 ```
 
-Comprobar que Elasticsearch responde:
+Check that Elasticsearch responds:
 
 ```bash
 curl -u elastic:${ELASTIC_PASSWORD} http://localhost:9200
 ```
-Ejemplo de respuesta esperada:
+Example of the expected response:
 
 ```json
 {
@@ -37,93 +37,93 @@ Ejemplo de respuesta esperada:
 }
 ```
 
-Comprobar salud del clúster
+Check cluster health
 ```bash
 curl -u elastic:${ELASTIC_PASSWORD} \
   http://localhost:9200/_cluster/health?pretty
 ```
 
-Estado recomendado en un nodo único:
-* **yellow**: normal, porque no hay réplicas disponibles con un solo nodo.
-* **red**: revisa los logs y el estado de los índices.
+Expected status on a single node:
+* **yellow**: normal, because no replicas can be allocated with a single node.
+* **red**: check the logs and the state of the indices.
 
-### Puertos expuestos
+### Exposed ports
 
-| Puerto | Uso |
+| Port | Usage |
 |---|---|
-| 9200 | API HTTP / REST de Elasticsearch | 
-| 9300 | Transporte interno entre nodos |
+| 9200 | Elasticsearch HTTP / REST API | 
+| 9300 | Internal transport between nodes |
 
-Para acceso desde otras aplicaciones, usa:
+For access from other applications, use:
 ```
 http://localhost:9200
 ```
 
-### Variables y recursos
+### Variables and resources
 
-| Variable | Valor por defecto | Descripción |
+| Variable | Default value | Description |
 |---|---|---|
-| ELASTIC_PASSWORD | Definida en .env | Contraseña del usuario elastic |
-| ES_JAVA_OPTS | -Xms1g -Xmx1g | Memoria asignada a la JVM |
-| discovery.type | single-node | Configuración para un nodo único | 
-| xpack.security.enabled | true | Habilita autenticación y seguridad básica | 
+| ELASTIC_PASSWORD | Defined in .env | Password of the elastic user |
+| ES_JAVA_OPTS | -Xms1g -Xmx1g | Memory allocated to the JVM |
+| discovery.type | single-node | Single-node configuration | 
+| xpack.security.enabled | true | Enables authentication and basic security | 
 
-Para aumentar la memoria de la JVM, modifica en docker-compose.yml:
+To increase the JVM memory, change it in docker-compose.yml:
 
 ```text
 ES_JAVA_OPTS=-Xms2g -Xmx2g
 ```
 
-Ambos valores deben ser iguales para evitar resizing frecuente de la JVM.
+Both values must be equal to avoid frequent JVM heap resizing.
 
-## Volúmenes
+## Volumes
 
-Los datos se almacenan en el volumen Docker:
+Data is stored in the Docker volume:
 
 ```text
 elasticsearch_data
 ```
 
-Para inspeccionarlo:
+To inspect it:
 
 ```bash
 docker volume ls
 docker volume inspect elasticsearch_data
 ```
 
-Los índices persisten aunque se detenga o recree el contenedor.
+Indices persist even if the container is stopped or recreated.
 
-## Operaciones habituales
+## Common operations
 
-Ver logs
+View logs
 ```bash
 docker compose logs -f elasticsearch
 ```
-Parar el servicio
+Stop the service
 ```bash
 docker compose down
 ```
 
-Parar y conservar datos
+Stop and keep data
 ```bash
 docker compose down
 ```
 
-El volumen no se elimina con down.
+The volume is not removed with down.
 
-Eliminar contenedor y datos
+Remove container and data
 ```bash
 docker compose down -v
 ```
 
-Esto borra todos los índices y documentos almacenados en Elasticsearch.
+This deletes all indices and documents stored in Elasticsearch.
 
-Reiniciar desde cero
+Restart from scratch
 ```bash
 docker compose down -v
 docker compose up -d
 ```
-Crear un índice de prueba
+Create a test index
 ```bash
 curl -u elastic:${ELASTIC_PASSWORD} \
   -X PUT "http://localhost:9200/test-index" \
@@ -136,35 +136,35 @@ curl -u elastic:${ELASTIC_PASSWORD} \
   }'
 ```
 
-Insertar un documento:
+Insert a document:
 ```bash
 curl -u elastic:${ELASTIC_PASSWORD} \
   -X POST "http://localhost:9200/test-index/_doc" \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "Hola Elasticsearch",
+    "message": "Hello Elasticsearch",
     "level": "INFO",
     "timestamp": "2026-10-21T15:00:00Z"
   }'
 ```
 
-Consultar documentos:
+Query documents:
 
 ```bash
 curl -u elastic:${ELASTIC_PASSWORD} \
   "http://localhost:9200/test-index/_search?pretty"
 ```
 
-Integración con aplicaciones
-Ejemplo para una aplicación .NET:
+Integration with applications
+Example for a .NET application:
 
 ```text
 Elasticsearch__Url=http://localhost:9200
 Elasticsearch__Username=elastic
-Elasticsearch__Password=CambiaEstaPasswordSegura
+Elasticsearch__Password=ChangeThisSecurePassword
 ```
 
-Ejemplo para Docker Compose en otra pila:
+Example for Docker Compose in another stack:
 
 ```yaml
 environment:
@@ -172,18 +172,18 @@ environment:
   - ELASTICSEARCH_USERNAME=elastic
   - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
 ``` 
-Si ambos servicios están en la misma red de Docker, usa el nombre del servicio:
+If both services are on the same Docker network, use the service name:
 ```text
 http://elasticsearch:9200
 ```
 
-### Seguridad
-Esta configuración habilita seguridad con usuario y contraseña, pero está pensada para desarrollo local.
+### Security
+This configuration enables security with a username and password, but it is intended for local development.
 
-Para producción se recomienda:
-* Usar al menos tres nodos master-eligible. 
-* Configurar TLS para transporte HTTP y entre nodos. 
-* Crear usuarios y roles con privilegios mínimos. 
-* No exponer 9200 directamente a Internet. 
-* Configurar snapshots y backups. 
-* Usar secretos gestionados, por ejemplo HashiCorp Vault, en lugar de .env.
+For production it is recommended to:
+* Use at least three master-eligible nodes. 
+* Configure TLS for HTTP and inter-node transport. 
+* Create users and roles with least privilege. 
+* Not expose port 9200 directly to the Internet. 
+* Configure snapshots and backups. 
+* Use managed secrets, for example HashiCorp Vault, instead of .env.
