@@ -1,0 +1,94 @@
+# Rendered by the nginx image at startup into /etc/nginx/conf.d/default.conf.
+# ${VARIABLES} come from the nginx service environment in docker-compose.yaml.
+
+server_tokens off;
+
+# Docker's embedded DNS: resolve "nexus" at request time, so NGINX starts even
+# if Nexus is down and follows its IP if the container is recreated.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# TLS (shared by all HTTPS servers)
+ssl_certificate           /etc/nginx/certs/nexus.crt;
+ssl_certificate_key       /etc/nginx/certs/nexus.key;
+ssl_protocols             TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_session_cache         shared:SSL:10m;
+ssl_session_timeout       1d;
+ssl_session_tickets       off;
+
+# Compression for the UI and repository metadata (artifacts are usually already compressed)
+gzip              on;
+gzip_proxied      any;
+gzip_min_length   1024;
+gzip_types        text/plain text/css text/xml application/xml application/json application/javascript;
+
+# ---------------------------------------------------------------------------
+# HTTP: health endpoint + redirect everything to HTTPS
+# ---------------------------------------------------------------------------
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 301 https://$host:${NGINX_HTTPS_PORT}$request_uri;
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Nexus web UI, REST API and Maven/npm/PyPI/... repositories
+# Default HTTPS server: any unknown host name also lands here.
+# ---------------------------------------------------------------------------
+server {
+    listen 443 ssl default_server;
+    http2 on;
+    server_name ${NEXUS_HOST} localhost;
+
+    # Uncomment once you use a trusted certificate (browsers remember it for a year)
+    # add_header Strict-Transport-Security "max-age=31536000" always;
+
+    # Optional: restrict access to internal networks
+    # allow 10.0.0.0/8;
+    # allow 192.168.0.0/16;
+    # deny  all;
+
+    location / {
+        set $nexus_upstream http://nexus:8081;
+        proxy_pass $nexus_upstream;
+        include /etc/nginx/snippets/nexus-proxy.conf;
+    }
+
+    # Friendly message while Nexus is starting (first start takes ~3 minutes)
+    error_page 502 503 504 = @nexus_unavailable;
+    location @nexus_unavailable {
+        default_type text/plain;
+        return 503 "Nexus is starting or unavailable. Try again in a few minutes.\n";
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Docker registry: forwards to the HTTP connector of the Docker hosted repository
+# Usage: docker login ${REGISTRY_HOST}
+# ---------------------------------------------------------------------------
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${REGISTRY_HOST};
+
+    location / {
+        set $registry_upstream http://nexus:${REGISTRY_PORT};
+        proxy_pass $registry_upstream;
+        include /etc/nginx/snippets/nexus-proxy.conf;
+    }
+
+    error_page 502 503 504 = @registry_unavailable;
+    location @registry_unavailable {
+        default_type application/json;
+        return 503 '{"errors":[{"code":"UNAVAILABLE","message":"Nexus registry is starting or the Docker repository connector on port ${REGISTRY_PORT} is not configured"}]}';
+    }
+}

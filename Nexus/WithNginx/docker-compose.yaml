@@ -1,0 +1,84 @@
+services:
+  # One-shot service: generates a self-signed TLS certificate in ./certs if none exists.
+  # To use your own certificate, place nexus.crt and nexus.key in ./certs and it will be kept.
+  certs:
+    image: alpine/openssl:3.5.9
+    container_name: nexus-certs
+    entrypoint: ["/bin/sh", "/generate-certs.sh"]
+    environment:
+      NEXUS_HOST: ${NEXUS_HOST:-nexus.localhost}
+      REGISTRY_HOST: ${REGISTRY_HOST:-registry.nexus.localhost}
+    volumes:
+      - ./certs:/certs
+      - ./nginx/generate-certs.sh:/generate-certs.sh:ro
+    restart: "no"
+
+  nexus:
+    image: sonatype/nexus3:${NEXUS_VERSION:-3.98.1}
+    container_name: nexus
+    hostname: nexus
+    # No published ports: Nexus is only reachable through NGINX.
+    expose:
+      - "8081"                               # Web UI and REST API
+      - "${REGISTRY_PORT:-8082}"             # Docker hosted repository connector
+    volumes:
+      - nexus-data:/nexus-data
+    environment:
+      INSTALL4J_ADD_VM_PARAMS: >-
+        -Xms${NEXUS_HEAP:-2g} -Xmx${NEXUS_HEAP:-2g}
+        -XX:MaxDirectMemorySize=${NEXUS_DIRECT_MEMORY:-2g}
+        -Djava.util.prefs.userRoot=/nexus-data/javaprefs
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    stop_grace_period: 2m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/service/rest/v1/status/writable || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:${NGINX_IMAGE_VERSION:-1.30.6-alpine}
+    container_name: nexus-nginx
+    depends_on:
+      certs:
+        condition: service_completed_successfully
+      nexus:
+        condition: service_started          # NGINX answers "Nexus is starting" until Nexus is up
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"          # Redirects to HTTPS
+      - "${NGINX_HTTPS_PORT:-443}:443"       # Nexus UI and Docker registry
+    environment:
+      # Used by the nginx image to render nginx/templates/*.template into /etc/nginx/conf.d
+      NEXUS_HOST: ${NEXUS_HOST:-nexus.localhost}
+      REGISTRY_HOST: ${REGISTRY_HOST:-registry.nexus.localhost}
+      REGISTRY_PORT: ${REGISTRY_PORT:-8082}
+      NGINX_HTTPS_PORT: ${NGINX_HTTPS_PORT:-443}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  nexus-data:
+    driver: local

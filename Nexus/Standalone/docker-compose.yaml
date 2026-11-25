@@ -1,23 +1,42 @@
 services:
   nexus:
-    image: sonatype/nexus3:latest
+    # Pinned version for reproducible deployments. Override with NEXUS_VERSION in a .env file.
+    # Variants available: <version> (default), <version>-alpine, <version>-ubi
+    image: sonatype/nexus3:${NEXUS_VERSION:-3.98.1}
     container_name: nexus
-    hostname: 'nexus'
+    hostname: nexus
     ports:
-      - "8081:8081"  # Web UI and API
+      - "${NEXUS_PORT:-8081}:8081"          # Web UI and REST API
+      # Uncomment to expose Docker registry connectors (configured per repository in the UI)
+      # - "8082:8082"                       # Docker hosted repository
+      # - "8083:8083"                       # Docker group/proxy repository
     volumes:
       - nexus-data:/nexus-data
     environment:
-      - INSTALL4J_JAVA_HOME=/opt/java/openjdk  # Uses bundled OpenJDK
-      - INSTALL4J_ADD_VM_PARAMS=-Xms2g -Xmx4g -XX:MaxDirectMemorySize=2g  # Tune for 8GB+ RAM host
+      # JVM memory. Sonatype recommends Xms == Xmx. Defaults fit a host with 8 GB+ RAM.
+      # Production: e.g. -Xms4g -Xmx4g -XX:MaxDirectMemorySize=6g
+      INSTALL4J_ADD_VM_PARAMS: >-
+        -Xms${NEXUS_HEAP:-2g} -Xmx${NEXUS_HEAP:-2g}
+        -XX:MaxDirectMemorySize=${NEXUS_DIRECT_MEMORY:-2g}
+        -Djava.util.prefs.userRoot=/nexus-data/javaprefs
+    ulimits:
+      nofile:                                # Sonatype requires at least 65536 open files
+        soft: 65536
+        hard: 65536
+    stop_grace_period: 2m                    # Let Nexus shut down cleanly and avoid DB corruption
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/service/rest/v1/status || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/service/rest/v1/status/writable || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 180s  # First startup takes ~3min
+      start_period: 180s                     # First startup can take ~3 min
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   nexus-data:
-    driver: local   # More recommendable for PROD environments to set an external volume.
+    driver: local   # For production, prefer a bind mount or external volume (see Readme.md)
