@@ -1,6 +1,4 @@
 # MySQL docker compose file
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
