@@ -1,0 +1,23 @@
+services:
+  python-application:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        STACK_VERSION: ${STACK_VERSION:-3.12}
+    image: python-application:${TAG:-local}
+    container_name: python-application
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      APP_NAME: ${APP_NAME:-python-application}
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

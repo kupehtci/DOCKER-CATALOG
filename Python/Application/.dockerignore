@@ -1,0 +1,21 @@
+# Python caches and virtual environments
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+**/.pytest_cache/
+
+# Secrets and local config
+.env
+
+# IDE and OS files
+**/.idea/
+**/.vscode/
+**/.DS_Store
+
+# Docker files are not needed inside the image
+Dockerfile
+docker-compose.yaml
+.dockerignore
+.env.example
+Readme.md

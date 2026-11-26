@@ -1,0 +1,18 @@
+services:
+  python-singleshot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        STACK_VERSION: ${STACK_VERSION:-3.12}
+    image: python-singleshot:${TAG:-local}
+    container_name: python-singleshot
+    # Single-shot job: runs once and exits, never restarted
+    restart: "no"
+    environment:
+      TARGET_URLS: ${TARGET_URLS:-https://www.python.org,https://pypi.org}
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-5}
+      OUTPUT_FILE: /app/output/report.json
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./output:/app/output
